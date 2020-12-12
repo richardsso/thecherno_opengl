@@ -15,6 +15,9 @@ struct ShaderProgramSource
     std::string FragmentSource;
 };
 
+/**
+ * Retrieve file and parse it
+ */
 static struct ShaderProgramSource ParseShader(const std::string& filepath)
 {
     enum class ShaderType
@@ -45,6 +48,9 @@ static struct ShaderProgramSource ParseShader(const std::string& filepath)
     return { ss[0].str(), ss[1].str() };
 }
 
+/**
+ * Compile the shader into 1 program.
+ */
 static unsigned int CompileShader(unsigned int type, const std::string& source)
 {
     unsigned int id = glCreateShader(type);
@@ -75,6 +81,10 @@ static unsigned int CompileShader(unsigned int type, const std::string& source)
     return id;
 }
 
+/**
+ * Link vertexShader and fragmentShader into a shader program.
+ * Return a unique identifier of the shader back.
+ */
 static unsigned int CreateShader(const std::string& vertexShader, const std::string& fragmentShader)
 {
     // create a shader program
@@ -102,6 +112,7 @@ static unsigned int CreateShader(const std::string& vertexShader, const std::str
 
     glValidateProgram(program);
 
+    // Delete shaders because it has been linked into the program
     glDeleteShader(vs);
     glDeleteShader(fs);
 
@@ -118,16 +129,17 @@ int main( void )
 		return -1;
 	}
 
+    // GLFW Window Hints
 	glfwWindowHint(GLFW_SAMPLES, 4);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // To make MacOS happy; should not be needed
+	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	// Open a window and create its OpenGL context
-        GLFWwindow* window = glfwCreateWindow( 1024, 768, "Tutorial 02 - Red triangle", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow( 1024, 768, "Tutorial 02 - Red triangle", NULL, NULL);
 	if( window == NULL ){
-		fprintf( stderr, "Failed to open GLFW window. If you have an Intel GPU, they are not 3.3 compatible. Try the 2.1 version of the tutorials.\n" );
+		fprintf( stderr, "Failed to open GLFW window. If you have an Intel GPU, they are not 3.3 compatible.\n" );
 		getchar();
 		glfwTerminate();
 		return -1;
@@ -135,7 +147,7 @@ int main( void )
 	glfwMakeContextCurrent(window);
 
 	// Initialize GLEW
-	glewExperimental = true; // Needed for core profile
+	glewExperimental = true; // TODO: Needed for core profile
 	if (glewInit() != GLEW_OK) {
 		fprintf(stderr, "Failed to initialize GLEW\n");
 		getchar();
@@ -146,38 +158,40 @@ int main( void )
         std::cout << "Using GL Version: " << glGetString(GL_VERSION) << std::endl;
 
 	// Ensure we can capture the escape key being pressed below
+	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 	glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
 
-	// Dark blue background
-	glClearColor(0.0f, 0.0f, 0.4f, 0.0f);
-
+    // Create a vertex
 	GLuint VertexArrayID;
 	glGenVertexArrays(1, &VertexArrayID);
 	glBindVertexArray(VertexArrayID);
 
-        float positions[6] = {
-            -0.5f, -0.5f,
-             0.0f,  0.5f,
-             0.5f, -0.5f
-        };
+    // set vertex positions
+    int numPositions = 6;
+    float positions[numPositions] = {
+        -0.5f, -0.5f,
+         0.0f,  0.5f,
+         0.5f, -0.5f
+    };
 
-        // Create buffer and copy data
-        GLuint buffer;
-        glGenBuffers(1, &buffer);
-        glBindBuffer(GL_ARRAY_BUFFER, buffer);
-        glBufferData(GL_ARRAY_BUFFER, 6 * sizeof(float), positions, GL_STATIC_DRAW);
+    // Generate buffers and copy data
+    unsigned int buffer;
+    glGenBuffers(1, &buffer);
+    glBindBuffer(GL_ARRAY_BUFFER, buffer);
+    glBufferData(GL_ARRAY_BUFFER, numPositions * sizeof(float), positions, GL_STATIC_DRAW);
 
-        // define vertex layout
-        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), 0);
-        glEnableVertexAttribArray(0);
+    // Define vertex layout
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), 0);
 
-        ShaderProgramSource source = ParseShader("res/shaders/Basic.shader");
+    // Get parsed shader and print it onto screen for DEBUG purposes
+    ShaderProgramSource source = ParseShader("res/shaders/Basic.shader");
+    std::cout << "VERTEX" << std::endl << source.VertexSource << std::endl;
+    std::cout << "FRAGMENT" << std::endl << source.FragmentSource << std::endl;
 
-        std::cout << "VERTEX" << std::endl << source.VertexSource << std::endl;
-        std::cout << "FRAGMENT" << std::endl << source.FragmentSource << std::endl;
-
-        unsigned int shader = CreateShader(source.VertexSource, source.FragmentSource);
-        glUseProgram(shader);
+    // create the shader use it in the program
+    unsigned int shader = CreateShader(source.VertexSource, source.FragmentSource);
+    glUseProgram(shader);
 
 	do{
 		// Clear the screen
@@ -192,11 +206,11 @@ int main( void )
 
 	} // Check if the ESC key was pressed or the window was closed
 	while( glfwGetKey(window, GLFW_KEY_ESCAPE ) != GLFW_PRESS &&
-		   glfwWindowShouldClose(window) == 0 );
+		   !glfwWindowShouldClose(window));
 
 	// Cleanup VBO
-	glDeleteBuffers(1, &buffer);
-	glDeleteVertexArrays(1, &VertexArrayID);
+	glDeleteBuffers(1, &buffer); // TODO:
+	glDeleteVertexArrays(1, &VertexArrayID); // TODO:
 	glDeleteProgram(shader);
 
 	// Close OpenGL window and terminate GLFW
